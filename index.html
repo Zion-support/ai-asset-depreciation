@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Asset Depreciation — Zion Tech Group</title>
+<style>
+:root{--bg:#0a0e1a;--card:#131827;--accent:#4f8cff;--accent2:#7c5cff;--text:#e4e8f0;--muted:#8b95a8;--border:#1e2636;--success:#34d399;--warning:#fbbf24;--danger:#f87171}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+.container{max-width:900px;margin:0 auto;padding:2rem 1.5rem}
+header{text-align:center;padding:3rem 0 2rem;border-bottom:1px solid var(--border)}
+header h1{font-size:2.2rem;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:.5rem}
+header p{color:var(--muted);font-size:1.1rem}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2rem;margin:1.5rem 0}
+table{width:100%;border-collapse:collapse;margin:1rem 0}
+th,td{padding:.8rem;text-align:left;border-bottom:1px solid var(--border)}
+th{color:var(--accent);font-weight:600}
+tr:hover td{background:rgba(79,140,255,.05)}
+.method-select{display:flex;gap:1rem;margin:1rem 0;flex-wrap:wrap}
+.method-btn{background:var(--bg);border:1px solid var(--border);color:var(--muted);padding:.6rem 1.2rem;border-radius:8px;cursor:pointer;font-size:.9rem;transition:all .2s}
+.method-btn:hover,.method-btn.active{border-color:var(--accent);color:var(--accent)}
+.btn{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;border:none;padding:.8rem 2rem;border-radius:10px;font-size:1rem;font-weight:600;cursor:pointer;margin-top:1rem}
+.btn:hover{opacity:.9}
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin:1.5rem 0}
+.stat-box{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:1rem;text-align:center}
+.stat-box .num{font-size:1.5rem;font-weight:700}
+.stat-box .lbl{color:var(--muted);font-size:.8rem;margin-top:.3rem}
+</style>
+</head>
+<body>
+<div class="container">
+<header>
+<h1>AI Asset Depreciation Calculator</h1>
+<p>IT asset lifecycle depreciation — straight-line, declining balance, and tax-optimized methods for hardware fleets.</p>
+</header>
+<div class="card">
+<h2>Asset Fleet Depreciation Analysis</h2>
+<div class="method-select">
+<button class="method-btn active" onclick="setMethod('sl')">Straight-Line</button>
+<button class="method-btn" onclick="setMethod('db')">Declining Balance</button>
+<button class="method-btn" onclick="setMethod('sum')">Sum-of-Years</button>
+<button class="method-btn" onclick="setMethod('units')">Units of Production</button>
+</div>
+<div id="assetTable"></div>
+<button class="btn" onclick="calculate()">Calculate Depreciation</button>
+<div class="summary" id="summary"></div>
+</div>
+</div>
+<script>
+let currentMethod='sl';
+const assets=[
+{name:'Dell PowerEdge R750',purchase:18500,age:2,life:5,salvage:1850},
+{name:'HPE ProLiant DL380',purchase:22000,age:3,life:5,salvage:2200},
+{name:'Cisco Catalyst 9300',purchase:12000,age:1,life:7,salvage:1200},
+{name:'NetApp AFF A400',purchase:45000,age:4,life:5,salvage:4500},
+{name:'IBM FlashSystem 9200',purchase:68000,age:2,life:5,salvage:6800},
+];
+function setMethod(m){currentMethod=m;document.querySelectorAll('.method-btn').forEach(b=>b.classList.remove('active'));event.target.classList.add('active')}
+function calculate(){
+const summary=document.getElementById('summary');
+const table=document.getElementById('assetTable');
+let totalBV=0,totalDep=0;
+let rows=`<h3 style="margin:1rem 0 .5rem">Asset Schedule (${currentMethod==='sl'?'Straight-Line':currentMethod==='db'?'Declining Balance':currentMethod==='sum'?'Sum-of-Years':'Units of Production'})</h3><table><tr><th>Asset</th><th>Cost</th><th>Age</th><th>Life</th><th>Annual Dep</th><th>Book Value</th><th>Status</th></tr>`;
+assets.forEach(a=>{
+let annualDep,bookValue;
+if(currentMethod==='sl'){annualDep=(a.purchase-a.salvage)/a.life;bookValue=a.purchase-(annualDep*a.age)}
+else if(currentMethod==='db'){const rate=2/a.life;bookValue=a.purchase*Math.pow(1-rate,a.age);annualDep=bookValue*rate}
+else if(currentMethod==='sum'){const sumYears=(a.life*(a.life+1))/2;const remaining=a.life-a.age;annualDep=(a.purchase-a.salvage)*remaining/sumYears;bookValue=a.purchase-((a.purchase-a.salvage)*(1-remaining/sumYears)*a.age)}
+else{annualDep=(a.purchase-a.salvage)/a.life;bookValue=a.purchase-(annualDep*a.age)}
+bookValue=Math.max(bookValue,a.salvage);
+const status=bookValue<=a.salvage*1.5?'<span style="color:var(--warning)">Near EOL</span>':'<span style="color:var(--success)">Active</span>';
+rows+=`<tr><td>${a.name}</td><td>$${a.purchase.toLocaleString()}</td><td>${a.age}y</td><td>${a.life}y</td><td>$${annualDep.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</td><td>$${bookValue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g,',')}</td><td>${status}</td></tr>`;
+totalBV+=bookValue;totalDep+=annualDep;
+});
+rows+='</table>';
+table.innerHTML=rows;
+summary.innerHTML=`<div class="stat-box"><div class="num" style="color:var(--accent)">$${(assets.reduce((s,a)=>s+a.purchase,0)/1000).toFixed(0)}k</div><div class="lbl">Total Original Cost</div></div><div class="stat-box"><div class="num" style="color:var(--success)">$${(totalBV/1000).toFixed(0)}k</div><div class="lbl">Current Book Value</div></div><div class="stat-box"><div class="num" style="color:var(--warning)">$${(totalDep/1000).toFixed(0)}k/yr</div><div class="lbl">Annual Depreciation</div></div>`;
+}
+calculate();
+</script>
+</body>
+</html>
